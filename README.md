@@ -28,9 +28,9 @@ It supports a custom file extension ( `-ext`, default to `php` ) and other optio
 
 ## Compilation
 
-    go get github.com/evilsocket/dirsearch
+    go install github.com/evilsocket/dirsearch@latest
     cd dirsearch
-    make get_glide
+    make get_modules
     make install_dependencies
     make build
 

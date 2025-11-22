@@ -6,27 +6,28 @@ GOBUILD=go build
 DEPEND=github.com/Masterminds/glide
 
 ifeq ($(OS),Windows_NT)
-    RM = rmdir /s /q build 2>nul
+	RM = rmdir /s /q build 2>nul
 	BUILD_WIN = set GOOS=windows; set GOARCH=amd64
 	BUILD_LINUX = set GOOS=linux; set GOARCH=amd64
-	BUILD_OSX = set GOOS=darwin; set GOARCH=amd64
+	BUILD_OSX_int = set GOOS=darwin; set GOARCH=amd64
+	BUILD_OSX_arm = set GOOS=darwin; set GOARCH=arm64
 else
-    RM = rm -rf build/*
+	RM = rm -rf build/*
 	BUILD_WIN = GOOS=windows GOARCH=amd64
 	BUILD_LINUX = GOOS=linux GOARCH=amd64
-	BUILD_OSX = GOOS=darwin GOARCH=amd64
+	BUILD_OSX_int = GOOS=darwin GOARCH=amd64
+	BUILD_OSX_arm = GOOS=darwin GOARCH=arm64
 endif
 
-# Command to get glide, you need to run it only once
-.PHONY: get_glide
-get_glide:
-	go get -u -v $(DEPEND)
-	$(GOPATH)/bin/glide install
+# Command to set up Go modules, you need to run it only once or when deps change
+.PHONY: get_modules
+get_modules:
+	go mod tidy
 
-# Command to install dependencies using glide
+# Command to install/download dependencies using Go modules
 .PHONY: install_dependencies
 install_dependencies:
-	glide install
+	go mod download
 
 # Run tests in verbose mode with race detector and display coverage
 .PHONY: test
@@ -45,11 +46,17 @@ _build_linux:
 	$(info * Building executable for linux x64 [$(SOURCE) -> build/linux_x64/$(NAME)])
 	@ $(@shell BUILD_LINUX) $(GOBUILD) -o build/linux_x64/$(NAME) $(SOURCE)
 
-# Building osx binaries
-.PHONY: _build_osx
-_build_osx:
+# Building intel-chip osx binaries
+.PHONY: _build_osx_int
+_build_osx_int:
 	$(info * Building executable for osx x64 [$(SOURCE) -> build/darwin_amd64/$(NAME)])
-	@ $(@shell BUILD_OSX) $(GOBUILD) -o build/darwin_amd64/$(NAME) $(SOURCE)
+	@ $(@shell BUILD_OSX_int) $(GOBUILD) -o build/darwin_amd64/$(NAME) $(SOURCE)
+
+# Building arm-chip osx binaries
+.PHONY: _build_osx_arm
+_build_osx_arm:
+	$(info * Building executable for osx arm [$(SOURCE) -> build/darwin_arm64/$(NAME)])
+	@ $(@shell BUILD_OSX_arm) $(GOBUILD) -o build/darwin_arm64/$(NAME) $(SOURCE)
 
 # Building windows binaries
 .PHONY: _build_windows
@@ -59,7 +66,7 @@ _build_windows:
 
 # Clean the build folder and then build executable for linux and osx
 .PHONY: build
-build: clean _build_windows _build_linux _build_osx
+build: clean _build_windows _build_linux _build_osx_int _build_osx_arm
 
 # Run the application
 .PHONY: run
